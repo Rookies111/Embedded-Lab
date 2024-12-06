@@ -4,14 +4,12 @@
 
 bool LED_blue = 0;
 bool LED_green = 1;
-// bool SW2_curr = 0;
 
 void setup() {
   pinMode(SW2_PIN, INPUT_PULLUP);
   pinMode(LED_blue_PIN, OUTPUT);
   pinMode(LED_green_PIN, OUTPUT);
 
-  // SW2_curr = digitalRead(SW2_PIN);
   Serial.begin(9600);
 }
 
