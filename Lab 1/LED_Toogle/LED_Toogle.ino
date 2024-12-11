@@ -9,13 +9,10 @@ void setup() {
   pinMode(SW2_PIN, INPUT_PULLUP);
   pinMode(LED_blue_PIN, OUTPUT);
   pinMode(LED_green_PIN, OUTPUT);
-
-  Serial.begin(9600);
 }
 
 void loop() {
   if (!digitalRead(SW2_PIN)) {
-    Serial.println("SW2 push");
     LED_blue = !LED_blue;
     LED_green = !LED_green;
     while(!digitalRead(SW2_PIN)) {};
