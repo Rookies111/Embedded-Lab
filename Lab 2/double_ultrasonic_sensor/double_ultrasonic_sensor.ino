@@ -5,7 +5,6 @@ const int IO18 = 18; // Pin IO18
 const double air_velocity = 346;
 
 // For The First One
-
 int counter_start1 = 0;
 int counter_stop1 = 0;
 int time_capture1 = 0;
@@ -33,7 +32,6 @@ void IRAM_ATTR do_counter1() {
 }
 
 // For The Second One
-
 int counter_start2 = 0;
 int counter_stop2 = 0;
 int time_capture2 = 0;
