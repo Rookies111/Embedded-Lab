@@ -12,7 +12,7 @@ int freq = 24600;
 
 void IRAM_ATTR onTimer_0() {
     digitalWrite(DIGITAL_PIN, state = !state);
-    // Serial.println(String("onTimer() ") + String(millis()));
+    Serial.println(String("onTimer() ") + String(millis()));
 }
 
 void setup() {
