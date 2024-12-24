@@ -1,7 +1,7 @@
 #include <Wire.h> 
 
 #define LM73_ADDR 0x4D
-#define SEND_DELAY 10000  
+#define SEND_DELAY 10000
 
 String response;
 float data;
