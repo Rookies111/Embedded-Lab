@@ -1,34 +1,38 @@
 #include <Wire.h>
+#include "RTC_Timer.h"
 
-#define I2C_SDA 4
-#define I2C_SCL 5
-#define I2C_Address 0x6F
+#define SDA 4
+#define SCL 5
+#define Address 0x6F
+
+RTC_Timer rtc(SDA, SCL, Address);
+unsigned long time_now = 0;
 
 void setup() {
-  Wire.begin(I2C_SDA, I2C_SCL);
   Serial.begin(115200);
-  Wire.beginTransmission(I2C_Address);
-  Wire.write(0x00); // 0b1101 1110
-  Wire.write(1 << 7); // 0b1101 1110
-  Wire.endTransmission();
+  rtc.startClock();
+  rtc.resetClock();
+  rtc.setSecond(6);
+  rtc.setMinute(7);
+  rtc.setClockMode(false);
+  rtc.setHour(12);
+  rtc.setWeekDay(3);
 }
 
 void loop() {
-  Wire.beginTransmission(I2C_Address);
-  Wire.write(0x00); // 0b1101 1110
-  int res = Wire.endTransmission();
-  // Serial.println(res);
+  int sec = rtc.getSecond();
+  int min = rtc.getMinute();
+  int hr = rtc.getHour();
 
-  uint8_t count = Wire.requestFrom(I2C_Address, 1);
-  while (Wire.available()) {
-    byte buff = Wire.read();
-    // buff[1] = Wire.read();
-    Serial.println(buff & (128-1), BIN);
-    // Serial.println(buff[1], BIN);
+  if(millis() >= time_now + 1000){
+    time_now += 1000;
+    Serial.print(rtc.getTime());
+    Serial.println(rtc.getClockMode() ? " 12-hour" : " 24-hour");
+    Serial.println(rtc.getWeekDay());
   }
 
-}
-
-void getTime() {
-
+  if ( Serial.available() ) {
+    String res = Serial.readStringUntil(' ');
+    Serial.println(res);
+  }
 }
