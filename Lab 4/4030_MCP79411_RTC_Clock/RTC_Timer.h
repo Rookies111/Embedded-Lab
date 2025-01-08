@@ -7,6 +7,7 @@ private:
   int SDA;
   int SCL;
   byte address;
+  bool displayMode;
   
 public:
   RTC_Timer(int SDA, int SCL, byte Address);
@@ -17,11 +18,14 @@ public:
   // Reset RTC Clock time and date.
   void resetClock();
 
+  // Set display mode for RTC Clock. Only input long or short.
+  void setDisplayMode(String mode);
+
   // Get RTC Clock hour mode. True if the clock is in 12 hours mode, false if it's in 24 hours mode.
   bool getClockMode();
 
   // Set RTC Clock hour mode. True for 12 hours mode and false for 24 hours mode.
-  void setClockMode(bool isTwelveHour);
+  void setClockMode(String mode);
 
   // Get RTC Clock second.
   int getSecond();
