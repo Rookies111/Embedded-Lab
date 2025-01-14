@@ -89,6 +89,9 @@ void parser(String parse[], int length) {
       rtc.setClockMode(parse[i]);
     } else if (parse[0] == "/setDisplayMode") {
       rtc.setDisplayMode(parse[i]);
+    } else {
+      return;
     }
   }
+  Serial.println("RTC Clock has been updated!");
 }

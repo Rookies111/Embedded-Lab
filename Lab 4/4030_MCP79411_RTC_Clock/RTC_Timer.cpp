@@ -316,10 +316,14 @@ void RTC_Timer::setMonth(String month) {
 
   if (monthNum < 1 || monthNum > 12) return; // Guard condition for input out of range
 
+  // Calculate 10 month value and 1 month value
+  byte ten = byte(monthNum / 10) << 4;
+  byte one = byte(monthNum % 10);
+
   // Change month value in RTCC memory register
   Wire.beginTransmission(address);
   Wire.write(month_register);
-  Wire.write(monthNum);
+  Wire.write(ten | one);
   Wire.endTransmission();
 }
 
