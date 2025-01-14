@@ -67,8 +67,6 @@ void parser(String parse[], int length) {
 
   if (parse[0] == "/reset") {
     rtc.resetClock();
-  } else if (parse[0] == "/getClockMode") {
-    Serial.println(rtc.getClockMode());
   }
 
   for (int i = 1; i < length; i += 2) {
