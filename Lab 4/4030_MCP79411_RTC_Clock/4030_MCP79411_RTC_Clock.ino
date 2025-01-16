@@ -1,13 +1,10 @@
 #include <Wire.h>
 #include "RTC_Timer.h"
 
+// Reference: https://kidbright.info/files/Sch_KidBright32%20V1.3.pdf
 #define SDA 4
 #define SCL 5
 #define Address 0x6F
-
-// Reference: https://kidbright.info/files/Sch_KidBright32%20V1.3.pdf
-
-void strSplit();
 
 RTC_Timer rtc(SDA, SCL, Address);
 unsigned long time_now = 0;
