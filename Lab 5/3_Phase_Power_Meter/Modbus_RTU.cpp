@@ -1,3 +1,4 @@
+#include "esp32-hal-gpio.h"
 #include "HardwareSerial.h"
 #include "Modbus_RTU.h"
 #include <stdint.h>
@@ -13,13 +14,81 @@ void Modbus_RTU::init(int baudrate) {
   Serial1.begin(baudrate, SERIAL_8N1, output_pin, input_pin);
 }
 
+int Modbus_RTU::readData(uint8_t* data) {
+  unsigned long prev_time = millis();
+  while (Serial1.available() == 0) {
+    if (millis() - prev_time > 20000) {
+      return -1;
+    }
+  }
+  int indexMax = 0;
+  prev_time = millis();
+  while (Serial1.available() > 0) {
+    data[indexMax++] = Serial1.read();
+    prev_time = millis();
+    while (Serial1.available() == 0) {
+      if (millis() - prev_time > 500) {
+        break;
+      }
+    }
+  }
+
+  return indexMax;
+}
+
 int Modbus_RTU::request(uint8_t address, uint16_t register_addr, uint16_t size) {
-  uint8_t packet[8] = {address, 0x03, register_addr >> 8, register_addr & 8, size >> 8, size & 8};
-  for (int i = 0; i < 6; i++) Serial.println(i);
-  // digitalWrite(direct_pin, HIGH);
-  // delay(10);
-  // Serial1.write()
-  // return responseFrame(0x08, 0x03, 0x02, {0x01, 0x01}, 0x0101);
+  uint8_t packet[8] = {address, 0x03, register_addr >> 8, register_addr & 0xff, size >> 8, size & 0xff};
+  uint16_t crc = CRC(packet, 6);
+  packet[6] = crc & 0xff;
+  packet[7] = crc >> 8;
+
+  Serial.print("Packet: [");
+  for (int i = 0; i < 8; i++) {
+    Serial.print(" ");
+    Serial.print(packet[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println("]");
+
+  digitalWrite(direct_pin, HIGH);
+  delay(10);
+  Serial1.write(packet, 8);
+  delay(10);
+  digitalWrite(direct_pin, LOW);
+
+  uint8_t buff[128];
+  int length = readData(buff);
+
+  Serial.println(length);
+
+  if (length < 0) {
+    return -1;
+  }
+
+  for (int i = 0; i < length; i++) {
+    Serial.print(buff[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+  
+  uint16_t receivedCRC = CRC(buff, length-2);
+  Serial.println(receivedCRC, HEX);
+  Serial.println(buff[length-2], HEX);
+  Serial.println(buff[length-1], HEX);
+  if (receivedCRC & 0xff != buff[length-2] || receivedCRC >> 8 != buff[length-1]) {
+    return -2;
+  }
+
+  int value = 0;
+  int pos = 0;
+  int temp = 0;
+  for (int i = length-3; i > 2; i--) {
+    int shiftAmount = (pos++)*8;
+    temp |= (buff[i] << shiftAmount);
+  }
+
+  value = (int)temp;
+  return value;
 }
 /*
 From: http://www.ccontrolsys.com/w/How_to_Compute_the_Modbus_RTU_Message_CRC
@@ -30,7 +99,7 @@ The code below agrees with the online calculator here:
 http://www.lammertbies.nl/comm/info/crc-calculation.html
 
 */
-uint8_t Modbus_RTU::CRC(uint8_t packet[], int len) {
+uint16_t Modbus_RTU::CRC(uint8_t packet[], int len) {
   uint16_t crc = 0xFFFF;
 
   for (int pos = 0; pos < len; pos++) {
