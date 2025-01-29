@@ -55,7 +55,7 @@ void manageCommand(String input) {
       int value = output[2].toInt();
       if (value < 0 || value > 3) {
         Serial.print("Invailid Resolution Number: ");
-        Serial.println(value, int);
+        Serial.println(String(value));
         return;
       }
 
@@ -65,9 +65,6 @@ void manageCommand(String input) {
 }
 
 void setResolution(uint8_t resolution) {
-  Serial.print("Received: ");
-  Serial.println(resolution, BIN);
-
   Wire.beginTransmission(LM73_ADDR);
   Wire.write(0x04);
   int res = Wire.endTransmission();
@@ -162,13 +159,13 @@ float readTemperature() {
     byte buff[2];
     buff[0] = Wire.read();
     buff[1] = Wire.read();
-    Serial.println(buff[0], BIN);
-    Serial.println(buff[1], BIN);
     temp += (int)(buff[0] << 1);
     if (buff[1]&0b10000000) temp += 1.0;
     if (buff[1]&0b01000000) temp += 0.5;
     if (buff[1]&0b00100000) temp += 0.25;
     if (buff[1]&0b00010000) temp += 0.125;
+    if (buff[1]&0b00001000) temp += 0.0625;
+    if (buff[1]&0b00000100) temp += 0.03125;
 
     // Negative if first bit of buff[0] is '1'
     if (buff[0]&0b10000000) temp *= -1.0; 
