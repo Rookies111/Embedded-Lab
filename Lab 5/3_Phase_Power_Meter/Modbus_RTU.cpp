@@ -13,8 +13,13 @@ void Modbus_RTU::init(int baudrate) {
   Serial1.begin(baudrate, SERIAL_8N1, output_pin, input_pin);
 }
 
-responseFrame Modbus_RTU::request(uint8_t address, uint8_t function) {
-  return responseFrame(0x08, 0x03, 0x02, {0x01, 0x01}, 0x0101);
+int Modbus_RTU::request(uint8_t address, uint16_t register_addr, uint16_t size) {
+  uint8_t packet[8] = {address, 0x03, register_addr >> 8, register_addr & 8, size >> 8, size & 8};
+  for (int i = 0; i < 6; i++) Serial.println(i);
+  // digitalWrite(direct_pin, HIGH);
+  // delay(10);
+  // Serial1.write()
+  // return responseFrame(0x08, 0x03, 0x02, {0x01, 0x01}, 0x0101);
 }
 /*
 From: http://www.ccontrolsys.com/w/How_to_Compute_the_Modbus_RTU_Message_CRC
@@ -25,12 +30,11 @@ The code below agrees with the online calculator here:
 http://www.lammertbies.nl/comm/info/crc-calculation.html
 
 */
-uint16_t Modbus_RTU::CRC(uint16_t buf, int len) {
+uint8_t Modbus_RTU::CRC(uint8_t packet[], int len) {
   uint16_t crc = 0xFFFF;
 
   for (int pos = 0; pos < len; pos++) {
-    int shift_amount = pos*8;
-    crc ^= (buf & (0xFF << shift_amount)) >> shift_amount;  // XOR byte into least sig. byte of crc
+    crc ^= packet[pos];  // XOR byte into least sig. byte of crc
 
     for (int i = 8; i != 0; i--) {  // Loop over each bit
       if ((crc & 0x0001) != 0) {    // If the LSB is set
