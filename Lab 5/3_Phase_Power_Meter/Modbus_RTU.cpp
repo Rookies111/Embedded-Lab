@@ -27,7 +27,7 @@ int Modbus_RTU::readData(uint8_t* data) {
     data[indexMax++] = Serial1.read();
     prev_time = millis();
     while (Serial1.available() == 0) {
-      if (millis() - prev_time > 500) {
+      if (millis() - prev_time > 1000) {
         break;
       }
     }
@@ -42,40 +42,48 @@ int Modbus_RTU::request(uint8_t address, uint16_t register_addr, uint16_t size) 
   packet[6] = crc & 0xff;
   packet[7] = crc >> 8;
 
-  Serial.print("Packet: [");
-  for (int i = 0; i < 8; i++) {
-    Serial.print(" ");
-    Serial.print(packet[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println("]");
+  // Serial.print("Request: [");
+  // for (int i = 0; i < 8; i++) {
+  //   Serial.print(" ");
+  //   Serial.print(packet[i], HEX);
+  //   Serial.print(" ");
+  // }
+  // Serial.println("]");
 
   digitalWrite(direct_pin, HIGH);
   delay(10);
   Serial1.write(packet, 8);
-  delay(10);
+  delay(9);
   digitalWrite(direct_pin, LOW);
 
   uint8_t buff[128];
   int length = readData(buff);
 
-  Serial.println(length);
+  // Serial.print("Response: [");
+  // for (int i = 0; i < length; i++) {
+  //   Serial.print(" ");
+  //   Serial.print(buff[i], HEX);
+  //   Serial.print(" ");
+  // }
+  // Serial.println("]");
 
-  if (length < 0) {
+  if (length <= 0) {
+    Serial.println("Error -1: Request Timeout");
     return -1;
   }
 
-  for (int i = 0; i < length; i++) {
-    Serial.print(buff[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-  
   uint16_t receivedCRC = CRC(buff, length-2);
-  Serial.println(receivedCRC, HEX);
-  Serial.println(buff[length-2], HEX);
-  Serial.println(buff[length-1], HEX);
-  if (receivedCRC & 0xff != buff[length-2] || receivedCRC >> 8 != buff[length-1]) {
+
+  if ((uint8_t(receivedCRC & 0xff) != buff[length-2]) || (uint8_t(receivedCRC >> 8) != buff[length-1])) {
+    Serial.println("Error -2: CRC Invalid.");
+    Serial.println("Calculated vs Received");
+    Serial.print(receivedCRC & 0xff, HEX);
+    Serial.print(" != ");
+    Serial.print(buff[length-2], HEX);
+    Serial.print(" or ");
+    Serial.print(receivedCRC >> 8, HEX);
+    Serial.print(" != ");
+    Serial.println(buff[length-1], HEX);
     return -2;
   }
 
