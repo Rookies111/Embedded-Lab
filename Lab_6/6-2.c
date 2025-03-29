@@ -90,25 +90,39 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  int blue_btn = 0;
+  int red_btn = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	printf("Green LED OFF \n\r");
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+	  blue_btn = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
+	  if (blue_btn == 1) {
+	  	printf("Blue button not pressed! \n\r");
+	  	printf("Green LED OFF \n\r");
+	  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+	  } else {
+	  	printf("Blue button pressed! \n\r");
+	  	printf("Green LED ON \n\r");
+	  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+	  }
 
-	HAL_Delay(2000);
-
-	printf("Green LED ON \n\r");
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-
-	HAL_Delay(2000);
+	  red_btn = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
+	  if (red_btn == 1) {
+	  	 printf("Red button not pressed! \n\r");
+	  	 printf("Red LED OFF \n\r");
+	  	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+	  } else {
+	  	 printf("Red button pressed! \n\r");
+	  	 printf("Red LED ON \n\r");
+	  	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }

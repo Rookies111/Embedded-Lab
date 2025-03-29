@@ -9,7 +9,7 @@ float data;
 float readTemperature();
 
 void setup() {
-  Serial.begin(9600);  
+  Serial.begin(115200);  
   Wire.begin(4, 5);
 }
 
