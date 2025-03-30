@@ -2,7 +2,7 @@
 #define I2C_Temp_H
 #include <Arduino.h>
 
-class I2C_Temp{
+class I2C_Temp {
   private:
     int SDA;
     int SCL;
@@ -11,5 +11,6 @@ class I2C_Temp{
     I2C_Temp(int SDA, int SCL);
     void init();
     float readTemp();
+    byte readTempb();
 };
 #endif

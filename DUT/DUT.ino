@@ -1,8 +1,8 @@
-#include <Wire.h>  // I2C Library
 #include <SPI.h>   // SPI Library
 #include "I2C_Temp.h"
 #include "Modbus_RTU.h"
 
+// Kidbright Schematic: https://kidbright.info/files/Sch_KidBright32%20V1.3.pdf
 // RS485 (Manual Control)
 #define RS485_RX 19
 #define RS485_TX 23
@@ -13,10 +13,10 @@
 #define I2C_SCL 5
 
 // SPI Configuration
-#define SPI_MISO 19
-#define SPI_MOSI 23
-#define SPI_SCK 18
-#define SPI_SS 22
+#define SPI_MISO 34
+#define SPI_MOSI 35
+#define SPI_SCK 32
+#define SPI_SS 33
 
 I2C_Temp I2C(I2C_SDA, I2C_SCL);
 Modbus_RTU modbus(RS485_RX, RS485_DE, RS485_TX);
@@ -44,8 +44,8 @@ void setup() {
 
 // Function to simulate I2C communication
 void i2c_test() {
-  float temp = I2C.readTemp();
-  Serial.println(temp);
+  byte temp = I2C.readTempb();
+  Serial.println(temp, BIN);
 }
 
 // Function to simulate SPI communication
@@ -71,7 +71,7 @@ void rs485_test() {
 void loop() {
   i2c_test();
   spi_test();
-  rs485_test();
+  // rs485_test();
 
   delay(1000);
 }

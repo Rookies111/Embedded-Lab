@@ -2,15 +2,15 @@
 #include "Modbus_RTU.h"
 #include <stdint.h>
 
-Modbus_RTU::Modbus_RTU(int input_pin, int direct_pin, int output_pin) {
-  this->input_pin = input_pin;
-  this->direct_pin = direct_pin;
-  this->output_pin = output_pin;
+Modbus_RTU::Modbus_RTU(int RX_PIN, int DE_PIN, int TX_PIN) {
+  this->RX_PIN = RX_PIN;
+  this->DE_PIN = DE_PIN;
+  this->TX_PIN = TX_PIN;
 }
 
 void Modbus_RTU::init(int baudrate) {
-  pinMode(direct_pin, OUTPUT);
-  Serial1.begin(baudrate, SERIAL_8N1, output_pin, input_pin);
+  pinMode(DE_PIN, OUTPUT);
+  Serial1.begin(baudrate, SERIAL_8N1, TX_PIN, RX_PIN);
 }
 
 int Modbus_RTU::request(uint8_t address, uint16_t register_addr, uint16_t size) {
@@ -19,11 +19,11 @@ int Modbus_RTU::request(uint8_t address, uint16_t register_addr, uint16_t size) 
   packet[6] = crc & 0xff;
   packet[7] = crc >> 8;
 
-  digitalWrite(direct_pin, HIGH);
+  digitalWrite(DE_PIN, HIGH);
   delay(10);
   Serial1.write(packet, 8);
   delay(9);
-  digitalWrite(direct_pin, LOW);
+  digitalWrite(DE_PIN, LOW);
 
   uint8_t buff[128];
   int length = readData(buff);

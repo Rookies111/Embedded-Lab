@@ -52,3 +52,29 @@ float I2C_Temp::readTemp() {
   }
   return temp;
 }
+
+byte I2C_Temp::readTempb() {
+  Wire.beginTransmission(LM73_ADDR);
+  Wire.write(0x00);
+  int res = Wire.endTransmission();
+  switch (res) {
+    case 1:
+      Serial.println("data too long to fit in transmit buffer.");
+      return -1;
+    case 2:
+      Serial.println("received NACK on transmit of address.");
+      return -1;
+    case 3:
+      Serial.println("received NACK on transmit of data.");
+      return -1;
+    case 4:
+      Serial.println("other error. What have you done!");
+      return -1;
+    case 5:
+      Serial.println("timeout");
+      return -1;
+  }
+
+  uint8_t count = Wire.requestFrom(LM73_ADDR, 1);
+  return Wire.read();
+}
