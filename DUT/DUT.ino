@@ -1,11 +1,12 @@
 #include <Wire.h>  // I2C Library
 #include <SPI.h>   // SPI Library
 #include "I2C_Temp.h"
+#include "Modbus_RTU.h"
 
 // RS485 (Manual Control)
-#define RS485_RX 16
-#define RS485_TX 17
-#define RS485_DE 21  // RS485 Direction Control
+#define RS485_RX 19
+#define RS485_TX 23
+#define RS485_DE 18  // RS485 Direction Control
 
 // I2C Configuration
 #define I2C_SDA 4
@@ -18,6 +19,7 @@
 #define SPI_SS 22
 
 I2C_Temp I2C(I2C_SDA, I2C_SCL);
+Modbus_RTU modbus(RS485_RX, RS485_DE, RS485_TX);
 
 // Test buffer for SPI
 byte spi_test_data = 0x55;
@@ -36,9 +38,7 @@ void setup() {
   Serial.println("SPI Initialized");
 
   // RS485 Setup
-  Serial2.begin(9600, SERIAL_8N1, RS485_RX, RS485_TX);
-  pinMode(RS485_DE, OUTPUT);
-  digitalWrite(RS485_DE, LOW);  // Receiver mode
+  modbus.init(9600);
   Serial.println("RS485 Initialized");
 }
 
@@ -59,16 +59,12 @@ void spi_test() {
 
 // Function to simulate RS485 communication
 void rs485_test() {
-  digitalWrite(RS485_DE, HIGH);  // Enable TX
-  Serial2.write("Hello RS485");
-  delay(10);
-  digitalWrite(RS485_DE, LOW);  // Enable RX
-
-  delay(100);
-  if (Serial2.available()) {
-    String received = Serial2.readString();
-    Serial.print("RS485 Received: ");
-    Serial.println(received);
+  // Request Voltage of A
+  double Va = (double)modbus.request(0x08, 0x0000, 0x0002);
+  if (Va >= 0)  {
+    Serial.print("Voltage of A = ");
+    Serial.print(Va/1000);
+    Serial.println(" V");
   }
 }
 
