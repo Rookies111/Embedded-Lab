@@ -53,7 +53,7 @@ float I2C_Temp::readTemp() {
   return temp;
 }
 
-byte I2C_Temp::readTempb() {
+float I2C_Temp::readTempb() {
   Wire.beginTransmission(LM73_ADDR);
   Wire.write(0x00);
   int res = Wire.endTransmission();
@@ -75,6 +75,21 @@ byte I2C_Temp::readTempb() {
       return -1;
   }
 
-  uint8_t count = Wire.requestFrom(LM73_ADDR, 1);
-  return Wire.read();
+  uint8_t count = Wire.requestFrom(LM73_ADDR, 2);
+  float temp = 0.0;
+  if (count == 2) {
+    byte buff[2];
+    buff[0] = Wire.read();
+    buff[1] = Wire.read();
+    Serial.print(buff[1], BIN); Serial.println(buff[0], BIN);
+    temp += (int)(buff[0] << 1);
+    if (buff[1] & 0b10000000) temp += 1.0;
+    if (buff[1] & 0b01000000) temp += 0.5;
+    if (buff[1] & 0b00100000) temp += 0.25;
+    if (buff[1] & 0b00010000) temp += 0.125;
+
+    // Negative if first bit of buff[0] is '1'
+    if (buff[0] & 0b10000000) temp *= -1.0;
+  }
+  return temp;
 }

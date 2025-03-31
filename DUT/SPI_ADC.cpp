@@ -1,60 +1,60 @@
 #include "SPI_ADC.h"
+#include <Arduino.h>
+#include <stdint.h>
+#include <SPI.h>
 
-// Constructor
-SPI_ADC::SPI_ADC(uint8_t cs, uint8_t mosi, uint8_t miso, uint8_t sck) {
-  this->cs = cs;
-  this->mosi = mosi;
-  this->miso = miso;
-  this->sck = sck;
+SPIClass *spi = NULL;
+
+SPI_ADC::SPI_ADC(int csPin, int sckPin, int misoPin, int mosiPin) {
+  this->_csPin = csPin;
+  this->_sckPin = sckPin;
+  this->_misoPin = misoPin;
+  this->_mosiPin = mosiPin;
 }
 
-// Initialize SPI Pins
 void SPI_ADC::begin() {
-  pinMode(cs, OUTPUT);
-  pinMode(mosi, OUTPUT);
-  pinMode(miso, INPUT);
-  pinMode(sck, OUTPUT);
+  // Set the chip select pin as an output
+  pinMode(_csPin, OUTPUT);
+  digitalWrite(_csPin, HIGH);  // Deselect the chip by default
 
-  digitalWrite(cs, HIGH);  // Deselect SPI_ADC
+  // Create an SPI object with the custom pins (using HSPI or VSPI)
+  spi = new SPIClass(VSPI);  // Use VSPI (you can change this to HSPI if you like)
+
+  // Initialize the SPI bus with custom pins
+  spi->begin(_sckPin, _misoPin, _mosiPin, _csPin);
 }
 
-// SPI Write Function (Bit-Banging)
-void SPI_ADC::spiWrite(uint8_t data) {
-  for (int i = 7; i >= 0; i--) {
-    digitalWrite(mosi, (data >> i) & 0x01);
-    digitalWrite(sck, HIGH);
-    delayMicroseconds(1);
-    digitalWrite(sck, LOW);
+uint16_t SPI_ADC::read(uint8_t channel) {
+  // Check if the channel is within valid range (0-7)
+  if (channel > 7) {
+    Serial.println("Error: Invalid channel. Must be between 0 and 7.");
+    return 0;
   }
-}
 
-// SPI Read Function (Bit-Banging)
-uint16_t SPI_ADC::spiRead() {
-  uint16_t value = 0;
-  for (int i = 11; i >= 0; i--) {
-    digitalWrite(sck, HIGH);
-    delayMicroseconds(1);
-    if (digitalRead(miso)) {
-      value |= (1 << i);
-    }
-    digitalWrite(sck, LOW);
-  }
-  return value;
-}
+  // Start the SPI transaction
+  digitalWrite(_csPin, LOW);
 
-// Read ADC Value
-int SPI_ADC::readADC(uint8_t channel) {
-  if (channel > 7) return -1;  // Invalid channel
+  // MCP3208 SPI command for reading an ADC channel
+  // MCP3208 uses a 3-byte command for each read:
+  // - Start bit (1)
+  // - Channel select (3 bits)
+  // - Single-ended (0) or differential (1) mode (1 bit)
+  // - 12-bit result (0x0 or 0x8 for a 12-bit result)
+  uint8_t command1 = 0x06 | ((channel & 0x07) >> 2);  // First byte: Start bit + channel bits
+  uint8_t command2 = ((channel & 0x03) << 6);         // Second byte: Remaining channel bits
+  uint8_t command3 = 0x00;                            // Third byte (empty)
 
-  digitalWrite(cs, LOW);  // Select SPI_ADC
+  // Send the command bytes
+  spi->transfer(command1);
+  spi->transfer(command2);
+  uint8_t highByte = spi->transfer(command3);
+  uint8_t lowByte = spi->transfer(command3);
 
-  // Start bit (1), Single-Ended (1), and Channel Bits
-  uint8_t command = (0x18 | channel) << 3;  // 0b11000 (Start + SGL)
-  spiWrite(command);
+  // End the SPI transaction
+  digitalWrite(_csPin, HIGH);
 
-  // Read 12-bit ADC Data
-  uint16_t adc_value = spiRead();
+  // Combine the high and low byte to get the result (12-bit ADC value)
+  uint16_t adcValue = ((highByte & 0x0F) << 8) | lowByte;
 
-  digitalWrite(cs, HIGH);  // Deselect SPI_ADC
-  return adc_value;
+  return adcValue;
 }

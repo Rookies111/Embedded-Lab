@@ -11,6 +11,6 @@ class I2C_Temp {
     I2C_Temp(int SDA, int SCL);
     void init();
     float readTemp();
-    byte readTempb();
+    float readTempb();
 };
 #endif

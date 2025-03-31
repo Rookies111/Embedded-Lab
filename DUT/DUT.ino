@@ -1,6 +1,7 @@
-#include <SPI.h>   // SPI Library
+#include <SPI.h>  // SPI Library
 #include "I2C_Temp.h"
 #include "Modbus_RTU.h"
+#include "SPI_ADC.h"
 
 // Kidbright Schematic: https://kidbright.info/files/Sch_KidBright32%20V1.3.pdf
 // RS485 (Manual Control)
@@ -20,9 +21,7 @@
 
 I2C_Temp I2C(I2C_SDA, I2C_SCL);
 Modbus_RTU modbus(RS485_RX, RS485_DE, RS485_TX);
-
-// Test buffer for SPI
-byte spi_test_data = 0x55;
+// SPI_ADC adc(SPI_SS, SPI_SCK, SPI_MISO, SPI_MOSI);
 
 void setup() {
   Serial.begin(115200);  // USB Serial Debugging
@@ -32,10 +31,8 @@ void setup() {
   Serial.println("I2C Initialized");
 
   // SPI Setup
-  SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SPI_SS);
-  pinMode(SPI_SS, OUTPUT);
-  digitalWrite(SPI_SS, HIGH);
-  Serial.println("SPI Initialized");
+  // adc.begin();
+  // Serial.println("SPI Initialized");
 
   // RS485 Setup
   modbus.init(9600);
@@ -44,22 +41,19 @@ void setup() {
 
 // Function to simulate I2C communication
 void i2c_test() {
-  byte temp = I2C.readTempb();
-  Serial.println(temp, BIN);
+  float temp = I2C.readTemp();
+  Serial.println(temp);
 }
 
 // Function to simulate SPI communication
 void spi_test() {
-  digitalWrite(SPI_SS, LOW);
-  byte response = SPI.transfer(spi_test_data);
-  digitalWrite(SPI_SS, HIGH);
-  Serial.print("SPI Test Response: 0x");
-  Serial.println(response, HEX);
+  // uint16_t value = adc.read(1);  // Read channel 0
+  Serial.print("ADC Value: ");
+  // Serial.println(value);
 }
 
 // Function to simulate RS485 communication
 void rs485_test() {
-  // Request Voltage of A
   double Va = (double)modbus.request(0x08, 0x0000, 0x0002);
   if (Va >= 0)  {
     Serial.print("Voltage of A = ");
@@ -70,8 +64,8 @@ void rs485_test() {
 
 void loop() {
   i2c_test();
-  spi_test();
-  // rs485_test();
+  // spi_test();
+  rs485_test();
 
   delay(1000);
 }
