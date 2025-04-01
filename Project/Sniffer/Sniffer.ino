@@ -61,7 +61,7 @@ void loop() {
     if (msgType == "I2C" && msgData == "Enable") {
       isCaptureI2C = true;
       isCaptureRS485 = false;
-    } else if (msgType == "RS485" && msgData == "Enable") {
+    } else if (msgType == "Modbus" && msgData == "Enable") {
       isCaptureI2C = false;
       isCaptureRS485 = true;
     } else if (msgType == "Keep Alive") {
@@ -89,9 +89,9 @@ void loop() {
     }
 
     // Ensure at least one frame is captured before sending
-    if (txCaptured || rxCaptured) {
+    if (txCaptured && rxCaptured) {
       // Construct full JSON message before sending
-      String jsonString = "{\"type\":\"RS485\", \"data\":\"" + txBinary + ";" + rxBinary + "\"}\n";
+      String jsonString = "{\"type\":\"Modbus\", \"data\":\"" + txBinary + ";" + rxBinary + "\"}\n";
 
       // Send as a single write operation to prevent splitting
       Serial.print(jsonString);
