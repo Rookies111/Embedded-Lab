@@ -81,7 +81,7 @@ float I2C_Temp::readTempb() {
     byte buff[2];
     buff[0] = Wire.read();
     buff[1] = Wire.read();
-    Serial.print(buff[1], BIN); Serial.println(buff[0], BIN);
+    Serial.print((char)(buff[0]), BIN); Serial.println((char)(buff[1]), BIN);
     temp += (int)(buff[0] << 1);
     if (buff[1] & 0b10000000) temp += 1.0;
     if (buff[1] & 0b01000000) temp += 0.5;

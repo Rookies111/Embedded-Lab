@@ -1,134 +1,118 @@
-#include <Wire.h>
-#include <SPI.h>
+#include <ArduinoJson.h>
+#include <ArduinoJson.hpp>
 
-// I2C Protocol Pin Configuration
-#define I2C_SDA 21
-#define I2C_SCL 22
+#include "I2CSniffer.h"
+#include "RS485_Sniffer.h"
 
-// RS-485(Modbus) Protocol Pin Configuration
-#define RS485_RX 16
-#define RS485_TX 17
+// I2C pin configuration
+#define I2C_SDA 16
+#define I2C_SCL 17
 
-// SPI Protocol Pin Configuration
-#define SPI_MISO 19
-#define SPI_MOSI 23
-#define SPI_SCK 18
-#define SPI_CS 5
+// RS485(Modbus) pin configuration
+#define RS485_RX 14
+#define RS485_TX 13
+#define RS485_DE 12
+#define BAUDRATE 9600
 
-#define SAMPLE_COUNT 32
+I2CSniffer I2C_sniffer(I2C_SDA, I2C_SCL);
+RS485_Sniffer RS485_sniffer(RS485_DE, RS485_RX, RS485_TX, BAUDRATE);
 
-// Set communication default flag
-volatile bool i2c_started = false;
-volatile bool spi_started = false;
-volatile bool rs485_started = false;
+bool isCaptureI2C = true;
+bool isCaptureRS485 = false;
 
-char sdaSeq[SAMPLE_COUNT + 1];
-char sclSeq[SAMPLE_COUNT + 1];
-
-// Variables to store last states of pins (for edge detection)
-static int lastSCL = LOW;
-static int lastSDA = LOW;
-static int lastSPI_SCK = LOW;
-static int lastRS485_RX = LOW;
-
-// Debounce delay
-#define DEBOUNCE_DELAY 50  // 50 milliseconds debounce time
-
-// Function to capture I2C data
-void captureI2C(int sdaPin, int sclPin, char *buffer, int maxBits) {
-  int lastSCL = digitalRead(sclPin);
-  int index = 0;
-
-  while (index < maxBits) {
-    int currentSCL = digitalRead(sclPin);
-
-    // Detect rising edge of SCL
-    if (lastSCL == LOW && currentSCL == HIGH) {
-      buffer[index++] = digitalRead(sdaPin) ? '1' : '0';
+// Function to convert bytes to binary string
+String bytesToBinaryString(uint8_t* buffer, int length) {
+  String binaryString = "";
+  for (int i = 0; i < length; i++) {
+    for (int j = 7; j >= 0; j--) {
+      binaryString += ((buffer[i] >> j) & 1) ? '1' : '0';
     }
-
-    lastSCL = currentSCL;  // Update previous clock state
   }
-
-  buffer[maxBits] = '\0';  // Null-terminate string
+  return binaryString;
 }
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(I2C_SDA, I2C_SCL);
-
-  // Set all pins as INPUT
-  pinMode(I2C_SDA, INPUT_PULLUP);
-  pinMode(I2C_SCL, INPUT_PULLUP);
-  pinMode(SPI_MISO, INPUT);
-  pinMode(SPI_MOSI, INPUT);
-  pinMode(SPI_SCK, INPUT);
-  pinMode(SPI_CS, INPUT);
-  pinMode(RS485_RX, INPUT);
-  pinMode(RS485_TX, INPUT);
-
-  // Start polling I2C, SPI, and RS485 communication
-  Serial.println("Monitoring I2C, SPI, and RS485 communication...");
+  I2C_sniffer.begin();
+  RS485_sniffer.begin();
+  Serial.println("Start sniffing...");
 }
 
 void loop() {
-  // Poll I2C (checking for start condition)
-  int currentSCL = digitalRead(I2C_SCL);
-  int currentSDA = digitalRead(I2C_SDA);
+  uint32_t dataBuffer;
 
-  // Check for I2C start condition (SDA falling while SCL is high)
-  if (lastSCL == HIGH && lastSDA == HIGH && currentSDA == LOW) {
-    i2c_started = true;
-    captureI2C(I2C_SDA, I2C_SCL, sdaSeq, SAMPLE_COUNT);
-    captureI2C(I2C_SCL, I2C_SCL, sclSeq, SAMPLE_COUNT);
-    Serial.print("SDA = ");
-    Serial.println(sdaSeq);
-    Serial.print("SCL = ");
-    Serial.println(sclSeq);
-    delay(DEBOUNCE_DELAY);  // Debounce the event
+  uint8_t rxData[64], txData[64];
+  int rxLen = 0, txLen = 0;
+
+  JsonDocument msg;
+
+  if (Serial.available()) {
+    DeserializationError error = deserializeJson(msg, Serial.readString());
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+
+    const char* msgType = msg["type"];
+    const char* msgData = msg["data"];
+
+    if (msgType == "I2C" && msgData == "Enable") {
+      isCaptureI2C = true;
+      isCaptureRS485 = false;
+    } else if (msgType == "RS485" && msgData == "Enable") {
+      isCaptureI2C = false;
+      isCaptureRS485 = true;
+    } else if (msgType == "Keep Alive") {
+      Serial.write("pong");
+    }
   }
 
-  // Poll SPI (checking the clock state)
-  int currentSPI_SCK = digitalRead(SPI_SCK);
+  if (isCaptureRS485) {
+    String txBinary = "", rxBinary = "";
+    bool txCaptured = false, rxCaptured = false;
+    unsigned long startTime = millis();
 
-  // Check for rising edge on SPI clock (SCK)
-  if (lastSPI_SCK == LOW && currentSPI_SCK == HIGH) {
-    spi_started = true;
-    Serial.println("SPI Communication Detected!");
-    delay(DEBOUNCE_DELAY);  // Debounce the event
+    // Wait up to 50ms to capture both TX and RX
+    while (millis() - startTime < 50) {
+      if (!txCaptured && RS485_sniffer.captureTXFrame(txData, txLen)) {
+        txBinary = bytesToBinaryString(txData, txLen);
+        txCaptured = true;
+      }
+      if (!rxCaptured && RS485_sniffer.captureRXFrame(rxData, rxLen)) {
+        rxBinary = bytesToBinaryString(rxData, rxLen);
+        rxCaptured = true;
+      }
+
+      if (txCaptured && rxCaptured) break;  // Exit loop early if both are received
+    }
+
+    // Ensure at least one frame is captured before sending
+    if (txCaptured || rxCaptured) {
+      // Construct full JSON message before sending
+      String jsonString = "{\"type\":\"RS485\", \"data\":\"" + txBinary + ";" + rxBinary + "\"}\n";
+
+      // Send as a single write operation to prevent splitting
+      Serial.print(jsonString);
+      Serial.flush();  // Ensure data is sent before the next loop iteration
+    }
+
+    delay(1);
   }
 
-  // Poll RS485 (check for data on RX pin)
-  int currentRS485_RX = digitalRead(RS485_RX);
+  if (isCaptureI2C) {
+    if (I2C_sniffer.capture(dataBuffer)) {
+      Serial.print("{\"type\": \"I2C\", \"data\": \"");
 
-  // Check for rising edge on RS485 RX pin
-  if (lastRS485_RX == LOW && currentRS485_RX == HIGH) {
-    rs485_started = true;
-    Serial.println("RS485 (Modbus) Communication Detected!");
-    delay(DEBOUNCE_DELAY);  // Debounce the event
+      // Convert captured data to binary string
+      for (int i = 24; i >= 0; i--) {
+        Serial.print((dataBuffer >> i) & 1);
+      }
+
+      Serial.println("\"}");
+    }
+
+    delay(300);
   }
-
-  // Print status messages for communication flags
-  if (i2c_started) {
-    Serial.println("I2C Communication Started!");
-    i2c_started = false;  // Reset flag after processing
-  }
-
-  if (spi_started) {
-    Serial.println("SPI Communication Started!");
-    spi_started = false;  // Reset flag after processing
-  }
-
-  if (rs485_started) {
-    Serial.println("RS485 (Modbus) Communication Started!");
-    rs485_started = false;  // Reset flag after processing
-  }
-
-  // Update the last states for the next loop iteration
-  lastSCL = currentSCL;
-  lastSDA = currentSDA;
-  lastSPI_SCK = currentSPI_SCK;
-  lastRS485_RX = currentRS485_RX;
-
-  delayMicroseconds(5);  // Add a small delay before polling again
 }
