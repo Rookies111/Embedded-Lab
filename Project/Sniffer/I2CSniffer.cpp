@@ -8,7 +8,7 @@ I2CSniffer::I2CSniffer(int sdaPin, int sclPin) {
 void I2CSniffer::begin() {
   pinMode(_sda, INPUT_PULLUP);
   pinMode(_scl, INPUT_PULLUP);
-  Serial.println("I2C Sniffer Initialized.");
+  // Serial.println("I2C Sniffer Initialized.");
 }
 
 bool I2CSniffer::waitForStartCondition() {
@@ -29,7 +29,7 @@ bool I2CSniffer::capture(uint32_t &capturedData) {
   // Wait for I2C Start Condition
   if (!waitForStartCondition()) return false;
 
-  Serial.println("I2C Start Condition Detected!");
+  // Serial.println("I2C Start Condition Detected!");
 
   // Store the Start Bit (SDA=0)
   capturedData = 0;

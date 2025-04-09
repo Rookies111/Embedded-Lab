@@ -17,8 +17,8 @@
 I2CSniffer I2C_sniffer(I2C_SDA, I2C_SCL);
 RS485_Sniffer RS485_sniffer(RS485_DE, RS485_RX, RS485_TX, BAUDRATE);
 
-bool isCaptureI2C = true;
-bool isCaptureRS485 = false;
+bool isCaptureI2C = false;
+bool isCaptureRS485 = true;
 
 // Function to convert bytes to binary string
 String bytesToBinaryString(uint8_t* buffer, int length) {
@@ -32,10 +32,10 @@ String bytesToBinaryString(uint8_t* buffer, int length) {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   I2C_sniffer.begin();
   RS485_sniffer.begin();
-  Serial.println("Start sniffing...");
+  // Serial.println("Start sniffing...");
 }
 
 void loop() {
@@ -47,11 +47,13 @@ void loop() {
   JsonDocument msg;
 
   if (Serial.available()) {
-    DeserializationError error = deserializeJson(msg, Serial.readString());
+    String receivedMsg = Serial.readStringUntil('\n');
+    DeserializationError error = deserializeJson(msg, receivedMsg);
 
     if (error) {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(error.f_str());
+      Serial.println(receivedMsg);
       return;
     }
 
@@ -64,13 +66,16 @@ void loop() {
     } else if (msgType == "Modbus" && msgData == "Enable") {
       isCaptureI2C = false;
       isCaptureRS485 = true;
-    } else if (msgType == "Keep Alive") {
-      Serial.write("pong");
+    } else if (msgType == "Keep Alive" && msgData == "Ping") {
+      Serial.println("{\"type\":\"Keep Alive\", \"data\":\"Pong\"}");
+    } else {
+      Serial.println(receivedMsg);
+      Serial.print(msgType); Serial.print(" "); Serial.println(msgData);
     }
   }
 
+  String txBinary = "", rxBinary = "";
   if (isCaptureRS485) {
-    String txBinary = "", rxBinary = "";
     bool txCaptured = false, rxCaptured = false;
     unsigned long startTime = millis();
 
@@ -96,6 +101,8 @@ void loop() {
       // Send as a single write operation to prevent splitting
       Serial.print(jsonString);
       Serial.flush();  // Ensure data is sent before the next loop iteration
+      txBinary = "";
+      rxBinary = "";
     }
 
     delay(1);

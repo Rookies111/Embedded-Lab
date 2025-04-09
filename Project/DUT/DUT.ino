@@ -45,5 +45,5 @@ void loop() {
   i2c_test();
   rs485_test();
 
-  delay(1000);
+  delay(2000);
 }
